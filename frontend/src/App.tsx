@@ -28,7 +28,7 @@ function App() {
     const formData = new FormData()
     formData.append('file', file)
 
-    const res = await fetch('http://localhost:8080/upload', {
+    const res = await fetch('http://localhost:8081/upload', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -40,7 +40,7 @@ function App() {
   }
 
   const ask = async () => {
-    const res = await fetch('http://localhost:8080/ask', {
+    const res = await fetch('http://localhost:8081/ask', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
