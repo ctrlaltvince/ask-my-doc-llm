@@ -1,92 +1,52 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { useEffect, useState } from "react";
 
 function App() {
-  const [token, setToken] = useState<string | null>(null)
-  const [file, setFile] = useState<File | null>(null)
-  const [question, setQuestion] = useState("")
-  const [answer, setAnswer] = useState("")
+  const [message, setMessage] = useState<string | null>(null);
+
+  const handleLogin = () => {
+    const domain = "https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com";
+    const clientId = "39u7iped9gp9cfnfutjp1ras8b";
+    const redirectUri = "http://localhost:5173";
+    const responseType = "code";
+    const scopes = "openid email profile";
+
+    const loginUrl = `${domain}/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&scope=${encodeURIComponent(scopes)}`;
+
+    window.location.href = loginUrl;
+  };
 
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash.includes("id_token") || hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.slice(1))
-      const accessToken = params.get("access_token")
-      if (accessToken) {
-        setToken(accessToken)
-      }
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+
+    if (code) {
+      // Send code to backend at port 8081
+      fetch("http://localhost:8081/callback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setMessage(`Login successful! Welcome, ${data.email}`);
+        })
+        .catch((err) => {
+          setMessage("Login failed: " + err.message);
+        });
     }
-  }, [])  // empty dependency array means this runs once on mount
-
-  const login = () => {
-    // Replace with your Cognito Hosted UI domain
-    window.location.href = 'https://your-cognito-domain.auth.us-east-1.amazoncognito.com/login?client_id=XXX&response_type=token&redirect_uri=http://localhost:5173'
-  }
-
-  const upload = async () => {
-    if (!file || !token) return
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const res = await fetch('http://localhost:8081/upload', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    })
-    const json = await res.json()
-    console.log(json)
-  }
-
-  const ask = async () => {
-    const res = await fetch('http://localhost:8081/ask', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ question }),
-    })
-    const json = await res.json()
-    setAnswer(json.answer)
-  }
+  }, []);
 
   return (
-    <div style={{ maxWidth: 600, margin: "auto", padding: "1rem" }}>
-      <h1>🧠 LLM Doc QA</h1>
-
-      {!token && (
-        <button onClick={login}>Login with Google</button>
-      )}
-
-      {token && (
-        <>
-          <div>
-            <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} />
-            <button onClick={upload}>Upload</button>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <input
-              type="text"
-              value={question}
-              onChange={e => setQuestion(e.target.value)}
-              placeholder="Ask a question..."
-              style={{ width: "100%" }}
-            />
-            <button onClick={ask}>Ask</button>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <strong>Answer:</strong>
-            <div>{answer}</div>
-          </div>
-        </>
-      )}
+    <div>
+      <h1>Ask My Doc LLM</h1>
+      <button onClick={handleLogin}>Login with Google</button>
+      {message && <p>{message}</p>}
     </div>
-  )
+  );
 }
 
-export default App
-
+export default App;
