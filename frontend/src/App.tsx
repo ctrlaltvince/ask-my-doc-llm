@@ -1,36 +1,41 @@
 import { useEffect, useState } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
+import OAuthCallback from "./OAuthCallback";
+import AskQuestion from "./AskQuestion";
+import UploadFile from "./UploadFile";
 
-function App() {
+
+const Home = () => {
   const clientID = "39u7iped9gp9cfnfutjp1ras8b";
-  const redirectURL = "http://localhost:5173";
+  const redirectURL = "http://localhost:5173/oauth/callback";
   const [message, setMessage] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
-
-  const handleLogin = () => {
-    console.log("Login button clicked");
-    window.location.href = `https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com/login?client_id=${clientID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(redirectURL)}`;
-  };
+  const [fileUploaded, setFileUploaded] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-
-    if (code) {
-      fetch("http://localhost:8081/callback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setToken(data.id_token); // backend should send id_token too
-          setMessage(`Login successful! Welcome, ${data.email}`);
-        })
-        .catch((err) => {
-          setMessage("Login failed: " + err.message);
-        });
+    if (location.state?.message) {
+      setMessage(location.state.message);
     }
-  }, []);
+  }, [location.state]);
+
+  useEffect(() => {
+    const storedToken = sessionStorage.getItem("id_token");
+    const incomingMessage = location.state?.message;
+
+    if (storedToken) {
+      setToken(storedToken);
+      // Only show "Welcome back!" if no message came from the redirect
+      setMessage(incomingMessage || "Login successful! Welcome back!");
+    } else if (incomingMessage) {
+      setMessage(incomingMessage);
+    }
+  }, [location.state]);
+
+
+  const handleLogin = () => {
+    window.location.href = `https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com/login?client_id=${clientID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(redirectURL)}`;
+  };
 
   const fetchProfile = () => {
     if (!token) return;
@@ -58,7 +63,18 @@ function App() {
       {!token && <button onClick={handleLogin}>Login with Google</button>}
       {token && <button onClick={fetchProfile}>Get Profile</button>}
       {message && <p>{message}</p>}
+      {token && <UploadFile onUploadSuccess={() => setFileUploaded(true)} />}
+      {token && fileUploaded && <AskQuestion />}
     </div>
+  );
+};
+
+function App() {
+  return (
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
+      </Routes>
   );
 }
 
