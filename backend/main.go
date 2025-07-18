@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
@@ -81,7 +82,8 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 	email, _ := claims["email"].(string)
 
 	resp := map[string]string{
-		"email": email,
+		"email":    email,
+		"id_token": rawIDToken,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
@@ -90,8 +92,8 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization") // Also add Authorization here
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -100,11 +102,64 @@ func enableCORS(next http.Handler) http.Handler {
 	})
 }
 
+func jwtMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := parts[1]
+
+		// Verify the token
+		ctx := r.Context()
+		idToken, err := provider.Verifier(&oidc.Config{ClientID: clientID}).Verify(ctx, tokenString)
+		if err != nil {
+			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// Store claims in context for handlers to use
+		var claims map[string]interface{}
+		if err := idToken.Claims(&claims); err != nil {
+			http.Error(w, "Failed to parse token claims", http.StatusUnauthorized)
+			return
+		}
+
+		ctx = context.WithValue(ctx, "claims", claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func profileHandler(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value("claims").(map[string]interface{})
+	if !ok {
+		http.Error(w, "No claims found", http.StatusInternalServerError)
+		return
+	}
+
+	email, _ := claims["email"].(string)
+
+	resp := map[string]string{
+		"email": email,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", callbackHandler)
-	handler := enableCORS(mux)
+	mux.Handle("/profile", jwtMiddleware(http.HandlerFunc(profileHandler)))
 
+	handler := enableCORS(mux)
 	log.Println("Server running on :8081")
 	log.Fatal(http.ListenAndServe(":8081", handler))
 }
