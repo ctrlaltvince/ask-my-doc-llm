@@ -2,16 +2,17 @@
 
 Secure web app that lets users log in with Google, upload a document, and ask questions about it using OpenAI.
 
-## Tech Stack
+## 💻 Tech Stack
 
-- Go (Gin) backend
-- React + Vite frontend
-- AWS Cognito (Google login)
-- AWS S3 (file storage)
-- AWS EKS + Fargate (deployment)
-- Helm (infrastructure as code)
+- **Go (Gin)** – REST API backend
+- **React + Vite** – Frontend
+- **AWS Cognito (Google login)** – Authentication
+- **AWS S3** – Secure file storage (with encryption at rest)
+- **AWS EKS + Fargate** – Kubernetes-based deployment
+- **Terraform** – Infrastructure as Code (EKS, Cognito, S3, IAM, etc.)
+- **Helm** – Kubernetes app packaging and deployment
 
-## Setup
+## 🚀 Setup
 
 ```bash
 # Run backend
