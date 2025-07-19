@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: 242650469816.dkr.ecr.us-west-1.amazonaws.com/ask-my-doc-backend
+  pullPolicy: Always
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+containerPort: 8081
+
+env:
+  clientId: "39u7iped9gp9cfnfutjp1ras8b"
+  clientSecret: "22hgbmveqbd36du39hbg43hgs18nm9vtjmqlop13o165b9ea3kj"
+  redirectUrl: "http://localhost:5173"
+  issuerUrl: "https://cognito-idp.us-west-1.amazonaws.com/us-west-1_RdclhXSHD"
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+

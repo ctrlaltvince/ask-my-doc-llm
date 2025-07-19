@@ -45,3 +45,6 @@ go.work.sum
 .env
 .env.*
 
+# Terraform
+.terraform/
+.terraform.lock.hcl
