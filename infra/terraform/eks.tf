@@ -7,7 +7,7 @@ resource "aws_eks_cluster" "this" {
   role_arn = aws_iam_role.eks_cluster.arn
 
   vpc_config {
-    subnet_ids = data.aws_subnets.default.ids
+    subnet_ids = aws_subnet.public[*].id  # EKS control plane can use public subnets
   }
 
   version = "1.29"
@@ -33,37 +33,16 @@ resource "aws_iam_role_policy_attachment" "eks_policy" {
   role       = aws_iam_role.eks_cluster.name
 }
 
+resource "aws_eks_fargate_profile" "default" {
+  cluster_name           = aws_eks_cluster.this.name
+  fargate_profile_name   = "default"
+  pod_execution_role_arn = aws_iam_role.fargate_pod_execution.arn
+  subnet_ids             = aws_subnet.private[*].id
 
-#resource "aws_eks_fargate_profile" "default" {
-#  cluster_name           = aws_eks_cluster.this.name
-#  fargate_profile_name   = "default"
-#  pod_execution_role_arn = aws_iam_role.fargate_pod_execution.arn
-#  subnet_ids             = data.aws_subnets.default.ids
-
-#  selector {
-#    namespace = "default"
-#  }
-
-#  depends_on = [aws_eks_cluster.this]
-#}
-
-resource "aws_eks_node_group" "default" {
-  cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "ask-my-doc-node-group"
-  node_role_arn   = aws_iam_role.eks_node.arn
-  subnet_ids      = data.aws_subnets.default.ids
-
-  scaling_config {
-    desired_size = 1
-    max_size     = 2
-    min_size     = 1
+  selector {
+    namespace = "default"
   }
 
-  depends_on = [
-    aws_eks_cluster.this,
-    aws_iam_role_policy_attachment.eks_node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.eks_node_AmazonEC2ContainerRegistryReadOnly,
-    aws_iam_role_policy_attachment.eks_node_AmazonEKS_CNI_Policy,
-  ]
+  depends_on = [aws_eks_cluster.this]
 }
 
