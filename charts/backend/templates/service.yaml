@@ -1,11 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "backend.fullname" . }}
+  name: {{ .Values.service.name }}
+  labels:
+    app: {{ .Values.app }}
 spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.containerPort }}
+      targetPort: {{ .Values.service.targetPort }}
   selector:
-    app: {{ include "backend.name" . }}
+    app: {{ .Values.app }}
+

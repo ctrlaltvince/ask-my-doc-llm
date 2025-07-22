@@ -1,5 +1,17 @@
 data "aws_caller_identity" "current" {}
 
+resource "kubernetes_service_account" "backend_sa" {
+  metadata {
+    name      = "backend-sa"
+    namespace = "default"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.backend_role.arn
+    }
+  }
+  depends_on = [aws_iam_role.backend_role]
+}
+
+
 resource "aws_iam_role" "eks_admin" {
   name = "eksAdminRole"
 
@@ -37,4 +49,47 @@ resource "aws_iam_role_policy_attachment" "fargate_pod_execution" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "fargate_ecr_readonly" {
+  role       = aws_iam_role.fargate_pod_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+data "aws_iam_policy_document" "backend_assume_role_policy" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+    }
+
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:default:backend-sa"]
+    }
+  }
+}
+
+resource "aws_iam_role" "backend_role" {
+  name               = "backend-service-role"
+  assume_role_policy = data.aws_iam_policy_document.backend_assume_role_policy.json
+}
+
+#data "aws_eks_cluster" "this" {
+#  name = "ask-my-doc-cluster"
+#}
+
+data "aws_eks_cluster_auth" "this" {
+  #name = aws_eks_cluster.this.name 
+  name = "ask-my-doc-cluster"
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da0afd10df6"]
+}
 

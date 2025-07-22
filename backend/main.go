@@ -41,7 +41,7 @@ func initOIDC() {
 // Middleware to handle CORS in Gin
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		if c.Request.Method == "OPTIONS" {
@@ -159,6 +159,14 @@ func main() {
 
 	r := gin.Default()
 	r.Use(corsMiddleware())
+
+	r.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Backend is running!\n")
+	})
+
+	r.GET("/health", func(c *gin.Context) {
+		c.String(http.StatusOK, "OK")
+	})
 
 	// Public route for callback (login)
 	r.POST("/callback", callbackHandler)

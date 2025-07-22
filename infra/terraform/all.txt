@@ -1,0 +1,426 @@
+=== coredns-patch.yaml ===
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      tolerations:
+        - key: "eks.amazonaws.com/compute-type"
+          operator: "Equal"
+          value: "fargate"
+          effect: "NoSchedule"
+
+
+=== eks.tf ===
+provider "aws" {
+  region = "us-west-1"
+}
+
+resource "aws_eks_cluster" "this" {
+  name     = "ask-my-doc-cluster"
+  role_arn = aws_iam_role.eks_cluster.arn
+
+  vpc_config {
+    subnet_ids = aws_subnet.public[*].id  # EKS control plane can use public subnets
+  }
+
+  version = "1.29"
+}
+
+resource "aws_iam_role" "eks_cluster" {
+  name = "eksClusterRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "eks.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster.name
+}
+
+resource "aws_eks_fargate_profile" "default" {
+  cluster_name           = aws_eks_cluster.this.name
+  fargate_profile_name   = "default"
+  pod_execution_role_arn = aws_iam_role.fargate_pod_execution.arn
+  subnet_ids             = aws_subnet.private[*].id
+
+  selector {
+    namespace = "default"
+  }
+
+  depends_on = [aws_eks_cluster.this]
+}
+
+resource "aws_eks_fargate_profile" "kube_system" {
+  cluster_name           = aws_eks_cluster.this.name
+  fargate_profile_name   = "kube-system"
+  pod_execution_role_arn = aws_iam_role.fargate_pod_execution.arn
+  subnet_ids             = aws_subnet.private[*].id
+
+  selector {
+    namespace = "kube-system"
+  }
+
+  depends_on = [aws_eks_cluster.this]
+}
+
+
+=== vpc.tf ===
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  tags = {
+    Name = "ask-my-doc-vpc"
+  }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_subnet" "public" {
+  count                   = 2
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 4, count.index)
+  map_public_ip_on_launch = true
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  tags = {
+    Name = "ask-my-doc-public-${count.index}"
+  }
+}
+
+resource "aws_subnet" "private" {
+  count             = 2
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 4, count.index + 2)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  tags = {
+    Name = "ask-my-doc-private-${count.index}"
+    "kubernetes.io/role/internal-elb"        = "1"
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+# Allocate Elastic IP for NAT Gateway
+resource "aws_eip" "nat_eip" {
+}
+
+# Create NAT Gateway in public subnet (use subnet[0])
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public[0].id
+  depends_on    = [aws_internet_gateway.igw]
+}
+
+# Create route table for private subnets
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+}
+
+# Associate private subnets with the private route table
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.private[0].id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "private_c" {
+  subnet_id      = aws_subnet.private[1].id
+  route_table_id = aws_route_table.private.id
+}
+
+
+=== alb-controller.tf ===
+data "aws_iam_policy_document" "alb_controller_assume_role" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.oidc.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.oidc.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:aws-load-balancer-controller"]
+    }
+  }
+}
+
+resource "aws_iam_openid_connect_provider" "oidc" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6A630BBA7CBB9AAECA88F56BF5134083BB7830B3"] 
+  url             = data.aws_eks_cluster.this.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_role" "alb_controller" {
+  name               = "AmazonEKSLoadBalancerControllerRole"
+  assume_role_policy = data.aws_iam_policy_document.alb_controller_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
+  role       = aws_iam_role.alb_controller.name
+  policy_arn = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
+}
+
+resource "kubernetes_service_account" "alb_controller_sa" {
+  metadata {
+    name      = "aws-load-balancer-controller"
+    namespace = "kube-system"
+    labels = {
+      "app.kubernetes.io/name" = "aws-load-balancer-controller"
+    }
+  }
+  automount_service_account_token = true
+  depends_on = [aws_iam_role.alb_controller]
+}
+
+resource "helm_release" "aws_load_balancer_controller" {
+  name       = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  version    = "1.7.1"
+
+  set = [
+    {
+      name  = "clusterName"
+      value = aws_eks_cluster.this.name
+    },
+    {
+      name  = "serviceAccount.create"
+      value = "false"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = kubernetes_service_account.alb_controller_sa.metadata[0].name
+    },
+    {
+      name  = "region"
+      value = "us-west-1"
+    },
+    {
+      name  = "vpcId"
+      value = aws_vpc.main.id
+    }
+  ]
+
+  depends_on = [aws_eks_fargate_profile.kube_system, kubernetes_service_account.alb_controller_sa]
+}
+
+
+=== coredns.tf ===
+resource "null_resource" "patch_coredns_toleration" {
+  provisioner "local-exec" {
+    command = "kubectl -n kube-system patch deployment coredns --type merge --patch \"$(cat ${path.module}/coredns-patch.yaml)\""
+  }
+
+  depends_on = [aws_eks_fargate_profile.kube_system]
+}
+
+
+=== iam.tf ===
+data "aws_caller_identity" "current" {}
+
+resource "aws_iam_role" "eks_admin" {
+  name = "eksAdminRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role" "fargate_pod_execution" {
+  name = "FargatePodExecutionRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "eks-fargate-pods.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "fargate_pod_execution" {
+  role       = aws_iam_role.fargate_pod_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "fargate_ecr_readonly" {
+  role       = aws_iam_role.fargate_pod_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+data "aws_iam_policy_document" "backend_assume_role_policy" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+    }
+
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:default:backend-sa"]
+    }
+  }
+}
+
+resource "aws_iam_role" "backend_role" {
+  name               = "backend-service-role"
+  assume_role_policy = data.aws_iam_policy_document.backend_assume_role_policy.json
+}
+
+data "aws_eks_cluster" "this" {
+  name = "ask-my-doc-cluster"
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = aws_eks_cluster.this.name 
+# name = "ask-my-doc-cluster"
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  url             = data.aws_eks_cluster.this.identity[0].oidc[0].issuer
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da0afd10df6"] # or get actual thumbprint
+}
+
+
+=== backend-serviceaccount.yaml ===
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-sa
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::<your-account-id>:role/backend-service-role
+
+
+=== debug-pod.yaml ===
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug
+spec:
+  containers:
+  - name: debug
+    image: busybox
+    command: ["sh", "-c", "while true; do sleep 30; done"]
+  restartPolicy: Never
+
+
+=== outputs.tf ===
+
+output "cluster_name" {
+  value = aws_eks_cluster.this.name
+}
+
+output "cluster_endpoint" {
+  value = aws_eks_cluster.this.endpoint
+}
+
+output "cluster_certificate_authority_data" {
+  value = aws_eks_cluster.this.certificate_authority[0].data
+}
+
+
+=== backend.tf ===
+terraform {
+  backend "s3" {
+    bucket         = "ask-my-doc-llm-terraform-state"
+    key            = "eks/terraform.tfstate"
+    region         = "us-west-1"
+    encrypt        = true
+    dynamodb_table = "terraform-locks"                  # Optional: for state locking
+  }
+}
+
+
+=== dynamo.db ===
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+
+
+=== provider.tf ===
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.30.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.20.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.11.0"
+    }
+  }
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.this.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.this.token
+}
+
