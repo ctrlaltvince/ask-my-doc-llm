@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ctrlaltvince/ask-my-doc-llm/internal"
 	"log"
 	"net/http"
 	"strings"
@@ -9,14 +10,12 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
-
-	"github.com/ctrlaltvince/ask-my-doc-llm/internal"
 )
 
 var (
 	clientID     = "39u7iped9gp9cfnfutjp1ras8b"
 	clientSecret = "22hgbmveqbd36du39hbg43hgs18nm9vtjmqlop13o165b9ea3kj"
-	redirectURL  = "http://localhost:5173/oauth/callback"
+	redirectURL  = "https://askmydoc.dev/oauth/callback"
 	issuerURL    = "https://cognito-idp.us-west-1.amazonaws.com/us-west-1_RdclhXSHD"
 	oauth2Config oauth2.Config
 	provider     *oidc.Provider
@@ -164,15 +163,14 @@ func main() {
 		c.String(http.StatusOK, "Backend is running!\n")
 	})
 
-	r.GET("/health", func(c *gin.Context) {
+	api := r.Group("/api")
+	api.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "OK")
 	})
 
-	// Public route for callback (login)
-	r.POST("/callback", callbackHandler)
+	api.POST("/callback", callbackHandler)
 
-	// Protected routes
-	auth := r.Group("/")
+	auth := api.Group("/")
 	auth.Use(jwtMiddleware())
 	{
 		auth.GET("/profile", profileHandler)

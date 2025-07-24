@@ -1,0 +1,22 @@
+app: frontend
+
+replicaCount: 1
+
+containerPort: 80
+
+image:
+  repository: 242650469816.dkr.ecr.us-west-1.amazonaws.com/ask-my-doc-frontend 
+  tag: latest
+  pullPolicy: Always
+
+service:
+  name: frontend
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  host: askmydoc.dev
+  path: /
+  certificateArn: arn:aws:acm:us-west-1:242650469816:certificate/25cc9f85-87e3-4339-a702-759b48e85bc4

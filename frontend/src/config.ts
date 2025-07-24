@@ -1,1 +1,1 @@
-export const BACKEND_URL = "https://askmydoc.dev";
+export const BACKEND_URL = "https://askmydoc.dev/api";

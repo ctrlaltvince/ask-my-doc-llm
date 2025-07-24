@@ -14,30 +14,31 @@ const OAuthCallback = () => {
     const code = urlParams.get('code');
 
     if (code) {
-      if (code) {
-        fetch(`${BACKEND_URL}/callback`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
+      fetch(`${BACKEND_URL}/callback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("OAuth callback failed");
+          return res.json();
         })
-            .then((res) => res.json())
-            .then((data) => {
-            sessionStorage.setItem("access_token", data.access_token);
-            sessionStorage.setItem("id_token", data.id_token);
-            navigate("/", {
-                state: {
-                message: `Login successful! Welcome, ${data.email}`,
-                },
-            });
-            })
-            .catch((err) => {
-            navigate("/", {
-                state: {
-                message: "Login failed: " + err.message,
-                },
-            });
-            });
-        }
+        .then((data) => {
+          sessionStorage.setItem("access_token", data.access_token);
+          sessionStorage.setItem("id_token", data.id_token);
+          navigate("/", {
+            state: {
+              message: `Login successful! Welcome, ${data.email}`,
+            },
+          });
+        })
+        .catch((err) => {
+          navigate("/", {
+            state: {
+              message: "Login failed: " + err.message,
+            },
+          });
+        });
     } else {
       navigate('/', { state: { message: 'Login was canceled or failed. Please try again.' } });
     }

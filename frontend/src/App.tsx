@@ -9,7 +9,8 @@ import { BACKEND_URL } from "./config";
 
 const Home = () => {
   const clientID = "39u7iped9gp9cfnfutjp1ras8b";
-  const redirectURL = "https://askmydoc.awsapps.com/oauth/callback";
+  const redirectURL = "https://askmydoc.dev/oauth/callback";
+  const cognitoDomain = "https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com";
   const [message, setMessage] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [fileUploaded, setFileUploaded] = useState(false);
@@ -34,9 +35,9 @@ const Home = () => {
     }
   }, [location.state]);
 
-
   const handleLogin = () => {
-    window.location.href = `https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com/login?client_id=${clientID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(redirectURL)}`;
+    const loginUrl = `${cognitoDomain}/login?client_id=${clientID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(redirectURL)}`;
+    window.location.href = loginUrl;
   };
 
   const fetchProfile = () => {
