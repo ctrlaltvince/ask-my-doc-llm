@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BACKEND_URL } from "./config";
 
 const OAuthCallback = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const OAuthCallback = () => {
 
     if (code) {
       if (code) {
-        fetch("http://localhost:8081/callback", {
+        fetch(`${BACKEND_URL}/callback`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code }),

@@ -6,13 +6,12 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
-    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-1:242650469816:certificate/25cc9f85-87e3-4339-a702-759b48e85bc4
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
 spec:
-  ingressClassName: alb  # ✅ This goes under `spec`, not `metadata.annotations`
   rules:
-    - http:
+    - host: askmydoc.dev
+      http:
         paths:
           - path: /
             pathType: Prefix

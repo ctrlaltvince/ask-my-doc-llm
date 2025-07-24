@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { BACKEND_URL } from "./config";
 
 export default function AskQuestion() {
   const [question, setQuestion] = useState('');
@@ -12,7 +13,7 @@ export default function AskQuestion() {
     setAnswer('');
     try {
       const token = sessionStorage.getItem("id_token"); 
-      const res = await fetch('http://localhost:8081/ask', {
+      const res = await fetch(`${BACKEND_URL}/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -26,7 +27,11 @@ export default function AskQuestion() {
       const data = await res.json();
       setAnswer(data.answer);
     } catch (e) {
-      setError(e.message);
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }

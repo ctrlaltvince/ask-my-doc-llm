@@ -3,11 +3,13 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import OAuthCallback from "./OAuthCallback";
 import AskQuestion from "./AskQuestion";
 import UploadFile from "./UploadFile";
+import { BACKEND_URL } from "./config";
+
 
 
 const Home = () => {
   const clientID = "39u7iped9gp9cfnfutjp1ras8b";
-  const redirectURL = "http://localhost:5173/oauth/callback";
+  const redirectURL = "https://askmydoc.awsapps.com/oauth/callback";
   const [message, setMessage] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [fileUploaded, setFileUploaded] = useState(false);
@@ -40,7 +42,7 @@ const Home = () => {
   const fetchProfile = () => {
     if (!token) return;
 
-    fetch("http://localhost:8081/profile", {
+    fetch(`${BACKEND_URL}/profile`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

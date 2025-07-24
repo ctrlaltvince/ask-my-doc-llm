@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { BACKEND_URL } from "./config";
 
 export default function UploadFile({ onUploadSuccess }: { onUploadSuccess: () => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -14,7 +15,7 @@ export default function UploadFile({ onUploadSuccess }: { onUploadSuccess: () =>
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('http://localhost:8081/upload', {
+      const res = await fetch(`${BACKEND_URL}/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
