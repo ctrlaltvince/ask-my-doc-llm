@@ -5,8 +5,6 @@ import AskQuestion from "./AskQuestion";
 import UploadFile from "./UploadFile";
 import { BACKEND_URL } from "./config";
 
-
-
 const Home = () => {
   const clientID = "39u7iped9gp9cfnfutjp1ras8b";
   const redirectURL = "https://askmydoc.dev/oauth/callback";
@@ -28,7 +26,6 @@ const Home = () => {
 
     if (storedToken) {
       setToken(storedToken);
-      // Only show "Welcome back!" if no message came from the redirect
       setMessage(incomingMessage || "Login successful! Welcome back!");
     } else if (incomingMessage) {
       setMessage(incomingMessage);
@@ -43,10 +40,12 @@ const Home = () => {
   const fetchProfile = () => {
     if (!token) return;
 
-    fetch(`${BACKEND_URL}/api/profile`, {
+    fetch(`${BACKEND_URL}/profile`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      credentials: "include", // credentials: 'include', // REQUIRED for CORS + Authorization header
     })
       .then((res) => {
         if (!res.ok) throw new Error("Unauthorized");
@@ -60,24 +59,49 @@ const Home = () => {
       });
   };
 
-  return (
-    <div>
-      <h1>Ask My Doc LLM</h1>
-      {!token && <button onClick={handleLogin}>Login with Google</button>}
-      {token && <button onClick={fetchProfile}>Get Profile</button>}
-      {message && <p>{message}</p>}
-      {token && <UploadFile onUploadSuccess={() => setFileUploaded(true)} />}
-      {token && fileUploaded && <AskQuestion />}
-    </div>
-  );
+    return (
+      <div
+        style={{
+          backgroundImage: 'url("/background.png")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          minHeight: "100vh",
+          width: "100vw",
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.6)", // dark transparent overlay
+            minHeight: "100vh",
+            width: "100vw",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2rem",
+            color: "white",
+          }}
+        >
+          <h1>Upload & Ask AI | Ask My Doc LLM</h1>
+          {!token && <button onClick={handleLogin}>Login with Google</button>}
+          {token && <button onClick={fetchProfile}>Get Profile</button>}
+          {message && <p>{message}</p>}
+          {token && <UploadFile onUploadSuccess={() => setFileUploaded(true)} />}
+          {token && fileUploaded && <AskQuestion />}
+        </div>
+      </div>
+    );
+
+
 };
 
 function App() {
   return (
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/oauth/callback" element={<OAuthCallback />} />
-      </Routes>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/oauth/callback" element={<OAuthCallback />} />
+    </Routes>
   );
 }
 

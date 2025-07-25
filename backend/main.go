@@ -40,13 +40,19 @@ func initOIDC() {
 // Middleware to handle CORS in Gin
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		if origin == "https://askmydoc.dev" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true") // for cookies or Authorization header
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusOK)
 			return
 		}
+
 		c.Next()
 	}
 }
@@ -178,7 +184,7 @@ func main() {
 	}
 
 	log.Println("Server running on :8081")
-	if err := r.Run(":8081"); err != nil {
+	if err := r.Run("0.0.0.0:8081"); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }
