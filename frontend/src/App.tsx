@@ -43,7 +43,7 @@ const Home = () => {
   const fetchProfile = () => {
     if (!token) return;
 
-    fetch(`${BACKEND_URL}/profile`, {
+    fetch(`${BACKEND_URL}/api/profile`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

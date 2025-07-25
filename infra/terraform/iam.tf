@@ -93,3 +93,26 @@ resource "aws_iam_openid_connect_provider" "eks" {
   thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da0afd10df6"]
 }
 
+resource "aws_iam_policy" "s3_upload_policy" {
+  name        = "AskMyDocS3UploadPolicy"
+  description = "Allow backend service to upload files to S3"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "arn:aws:s3:::ask-my-doc-llm-files/uploads/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "backend_s3_attach" {
+  role       = aws_iam_role.backend_role.name
+  policy_arn = aws_iam_policy.s3_upload_policy.arn
+}
+

@@ -1,37 +1,39 @@
 import { useState } from 'react';
 import { BACKEND_URL } from "./config";
 
-export default function AskQuestion() {
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
+export default function UploadFile({ onUploadSuccess }: { onUploadSuccess: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [s3Key, setS3Key] = useState<string | null>(null);
 
-  async function handleAsk() {
+  async function handleUpload() {
+    if (!file) return;
     setLoading(true);
-    setError('');
-    setAnswer('');
+    setStatus('');
+    setS3Key(null);
+
     try {
-      const token = sessionStorage.getItem("id_token"); 
-      const res = await fetch(`${BACKEND_URL}/ask`, {
+      const token = sessionStorage.getItem("id_token");
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${BACKEND_URL}/api/upload`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ question }),
+        body: formData,
       });
-      if (!res.ok) {
-        throw new Error('Failed to get answer');
-      }
+
+      if (!res.ok) throw new Error('Upload failed');
+
       const data = await res.json();
-      setAnswer(data.answer);
+      setStatus('File uploaded successfully!');
+      setS3Key(data.key);
+      onUploadSuccess();
     } catch (e) {
-      if (e instanceof Error) {
-        setError(e.message);
-      } else {
-        setError("An unknown error occurred");
-      }
+      setStatus('Error uploading file');
     } finally {
       setLoading(false);
     }
@@ -39,18 +41,17 @@ export default function AskQuestion() {
 
   return (
     <div>
-      <h2>Ask a question</h2>
-      <input
-        type="text"
-        value={question}
-        onChange={e => setQuestion(e.target.value)}
-        placeholder="Enter your question"
-      />
-      <button onClick={handleAsk} disabled={loading || !question}>
-        {loading ? 'Asking...' : 'Ask'}
+      <h2>Upload a file</h2>
+      <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} />
+      <button onClick={handleUpload} disabled={!file || loading}>
+        {loading ? 'Uploading...' : 'Upload'}
       </button>
-      {answer && <p><strong>Answer:</strong> {answer}</p>}
-      {error && <p style={{color: 'red'}}>{error}</p>}
+      {status && <p>{status}</p>}
+      {s3Key && (
+        <p>
+          <strong>S3 Key:</strong> <code>{s3Key}</code>
+        </p>
+      )}
     </div>
   );
 }

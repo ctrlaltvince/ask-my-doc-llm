@@ -46,7 +46,6 @@ resource "kubernetes_service_account" "alb_controller_sa" {
   depends_on = [aws_iam_role.alb_controller]
 }
 
-
 resource "helm_release" "aws_load_balancer_controller" {
   name       = "aws-load-balancer-controller"
   namespace  = "kube-system"
@@ -54,28 +53,30 @@ resource "helm_release" "aws_load_balancer_controller" {
   chart      = "aws-load-balancer-controller"
   version    = "1.7.1"
 
-  set = [
-    {
-      name  = "clusterName"
-      value = aws_eks_cluster.this.name
-    },
-    {
-      name  = "serviceAccount.create"
-      value = "false"
-    },
-    {
-      name  = "serviceAccount.name"
-      value = kubernetes_service_account.alb_controller_sa.metadata[0].name
-    },
-    {
-      name  = "region"
-      value = "us-west-1"
-    },
-    {
-     name  = "vpcId"
-      value = aws_vpc.main.id
-    }
-  ]
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.this.name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "false"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = kubernetes_service_account.alb_controller_sa.metadata[0].name
+  }
+
+  set {
+    name  = "region"
+    value = "us-west-1"
+  }
+
+  set {
+    name  = "vpcId"
+    value = aws_vpc.main.id
+  }
 
   depends_on = [
     aws_eks_cluster.this,

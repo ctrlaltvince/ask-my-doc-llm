@@ -15,7 +15,7 @@ export default function UploadFile({ onUploadSuccess }: { onUploadSuccess: () =>
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(`${BACKEND_URL}/upload`, {
+      const res = await fetch(`${BACKEND_URL}/api/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

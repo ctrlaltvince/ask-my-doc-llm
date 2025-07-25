@@ -67,8 +67,8 @@ func jwtMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-
 		ctx := context.Background()
+
 		idToken, err := provider.Verifier(&oidc.Config{ClientID: clientID}).Verify(ctx, tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: " + err.Error()})
@@ -81,9 +81,7 @@ func jwtMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Save claims in Gin context for handlers
 		c.Set("claims", claims)
-
 		c.Next()
 	}
 }
