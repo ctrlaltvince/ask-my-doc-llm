@@ -9,7 +9,8 @@ const Home = () => {
   const clientID = "39u7iped9gp9cfnfutjp1ras8b";
   const redirectURL = "https://askmydoc.dev/oauth/callback";
   const cognitoDomain = "https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com";
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null); // Login message
+  const [profileInfo, setProfileInfo] = useState<string | null>(null); // Profile display
   const [token, setToken] = useState<string | null>(null);
   const [fileUploaded, setFileUploaded] = useState(false);
   const location = useLocation();
@@ -45,55 +46,73 @@ const Home = () => {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      credentials: "include", // credentials: 'include', // REQUIRED for CORS + Authorization header
+      credentials: "include",
     })
       .then((res) => {
         if (!res.ok) throw new Error("Unauthorized");
         return res.json();
       })
       .then((data) => {
-        setMessage(`Profile email: ${data.email}`);
+        setProfileInfo(`Profile email: ${data.email}`);
       })
       .catch((err) => {
-        setMessage("Failed to fetch profile: " + err.message);
+        setProfileInfo("Failed to fetch profile: " + err.message);
       });
   };
 
-    return (
+  return (
+    <div
+      style={{
+        backgroundImage: 'url("/background.png")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        minHeight: "100vh",
+        width: "100vw",
+      }}
+    >
       <div
         style={{
-          backgroundImage: 'url("/background.png")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
           minHeight: "100vh",
           width: "100vw",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "2rem",
+          color: "white",
         }}
       >
-        <div
-          style={{
-            backgroundColor: "rgba(0, 0, 0, 0.6)", // dark transparent overlay
-            minHeight: "100vh",
-            width: "100vw",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "2rem",
-            color: "white",
-          }}
-        >
-          <h1>Upload & Ask AI | Ask My Doc LLM</h1>
-          {!token && <button onClick={handleLogin}>Login with Google</button>}
-          {token && <button onClick={fetchProfile}>Get Profile</button>}
-          {message && <p>{message}</p>}
-          {token && <UploadFile onUploadSuccess={() => setFileUploaded(true)} />}
-          {token && fileUploaded && <AskQuestion />}
-        </div>
+        {/* Top-left: Profile button + info */}
+        {token && (
+          <div
+            style={{
+              position: "absolute",
+              top: "1rem",
+              left: "1rem",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: "0.5rem",
+            }}
+          >
+            <button onClick={fetchProfile}>Get Profile</button>
+            {profileInfo && (
+              <span style={{ fontSize: "0.9rem" }}>{profileInfo}</span>
+            )}
+          </div>
+        )}
+
+        <h1>Upload & Ask AI | Ask My Doc LLM</h1>
+        {!token && <button onClick={handleLogin}>Login with Google</button>}
+        {message && <p>{message}</p>}
+        {token && <UploadFile onUploadSuccess={() => setFileUploaded(true)} />}
+        {token && fileUploaded && <AskQuestion />}
       </div>
-    );
-
-
+    </div>
+  );
 };
 
 function App() {

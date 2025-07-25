@@ -39,19 +39,42 @@ export default function AskQuestion() {
   }
 
   return (
-    <div>
-      <h2>Ask a question</h2>
-      <input
-        type="text"
-        value={question}
-        onChange={e => setQuestion(e.target.value)}
-        placeholder="Enter your question"
-      />
-      <button onClick={handleAsk} disabled={loading || !question}>
-        {loading ? 'Asking...' : 'Ask'}
-      </button>
-      {answer && <p><strong>Answer:</strong> {answer}</p>}
-      {error && <p style={{color: 'red'}}>{error}</p>}
+    <div style={{ marginTop: "2rem", textAlign: "center", maxWidth: "600px", marginInline: "auto" }}>
+      <h2 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>Ask a question</h2>
+      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
+        <input
+          type="text"
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          placeholder="Enter your question"
+          style={{
+            padding: "0.75rem 1rem",
+            borderRadius: "8px",
+            border: "none",
+            fontSize: "1rem",
+            minWidth: "300px",
+            maxWidth: "100%",
+          }}
+        />
+        <button
+          onClick={handleAsk}
+          disabled={loading || !question}
+          style={{
+            padding: "0.75rem 1.5rem",
+            borderRadius: "8px",
+            border: "none",
+            backgroundColor: "white",
+            color: "black",
+            fontSize: "1rem",
+            cursor: loading || !question ? "not-allowed" : "pointer",
+            opacity: loading || !question ? 0.6 : 1,
+          }}
+        >
+          {loading ? "Asking..." : "Ask"}
+        </button>
+      </div>
+      {answer && <p style={{ marginTop: "1rem", fontSize: "1.1rem" }}><strong>Answer:</strong> {answer}</p>}
+      {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
     </div>
   );
 }
