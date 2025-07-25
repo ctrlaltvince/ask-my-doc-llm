@@ -2,69 +2,55 @@ package internal
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"context"
 	"io"
+	"log"
 	"net/http"
-	"path/filepath"
-	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/gin-gonic/gin"
 )
 
+var S3Client *s3.Client
+
 func UploadFile(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
+	file, err := c.FormFile("file")
 	if err != nil {
+		log.Printf("file missing: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing file"})
 		return
 	}
 
-	// Open uploaded file
-	f, err := fileHeader.Open()
+	f, err := file.Open()
 	if err != nil {
+		log.Printf("file open error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
 		return
 	}
 	defer f.Close()
 
-	// Read file into memory
-	buf := new(bytes.Buffer)
-	if _, err := io.Copy(buf, f); err != nil {
+	content, err := io.ReadAll(f)
+	if err != nil {
+		log.Printf("read error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
-	fileBytes := buf.Bytes()
 
-	// Create a new AWS session
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-1"),
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create AWS session"})
-		return
-	}
-
-	// Generate a unique key for the S3 object
-	key := fmt.Sprintf("uploads/%s_%d%s", uuid.New().String(), time.Now().Unix(), filepath.Ext(fileHeader.Filename))
-
-	// Upload the file to S3
-	s3Client := s3.New(sess)
-	_, err = s3Client.PutObject(&s3.PutObjectInput{
+	// upload to S3
+	_, err = S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String("ask-my-doc-llm-files"),
-		Key:    aws.String(key),
-		Body:   bytes.NewReader(fileBytes),
-		ACL:    aws.String("private"),
+		Key:    aws.String("uploads/" + file.Filename),
+		Body:   bytes.NewReader(content),
+		// Optional if bucket is already configured:
+		// SSEKMSKeyId: aws.String("alias/ask-my-doc-s3"),
 	})
 	if err != nil {
+		log.Printf("S3 upload error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload to S3"})
 		return
 	}
 
-	// Success response
-	c.JSON(http.StatusOK, gin.H{
-		"status": "File uploaded successfully",
-		"key":    key,
-	})
+	log.Printf("upload succeeded: %s", file.Filename)
+	c.JSON(http.StatusOK, gin.H{"status": "Upload successful"})
 }

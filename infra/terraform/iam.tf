@@ -78,9 +78,11 @@ resource "aws_iam_role" "backend_role" {
   assume_role_policy = data.aws_iam_policy_document.backend_assume_role_policy.json
 }
 
-#data "aws_eks_cluster" "this" {
-#  name = "ask-my-doc-cluster"
-#}
+resource "aws_iam_role_policy_attachment" "backend_upload_policy_attachment" {
+  role       = aws_iam_role.backend_role.name
+  policy_arn = aws_iam_policy.s3_upload_policy.arn
+}
+
 
 data "aws_eks_cluster_auth" "this" {
   #name = aws_eks_cluster.this.name 
@@ -103,16 +105,12 @@ resource "aws_iam_policy" "s3_upload_policy" {
         Effect = "Allow"
         Action = [
           "s3:PutObject",
-          "s3:PutObjectAcl"
+          "s3:PutObjectAcl",
+          "s3:GetObject"
         ]
         Resource = "arn:aws:s3:::ask-my-doc-llm-files/uploads/*"
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "backend_s3_attach" {
-  role       = aws_iam_role.backend_role.name
-  policy_arn = aws_iam_policy.s3_upload_policy.arn
 }
 

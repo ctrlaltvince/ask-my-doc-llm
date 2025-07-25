@@ -16,8 +16,8 @@ data "aws_iam_policy_document" "alb_controller_assume_role" {
 
 resource "aws_iam_openid_connect_provider" "oidc" {
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6A630BBA7CBB9AAECA88F56BF5134083BB7830B3"] 
-  url             =aws_eks_cluster.this.identity[0].oidc[0].issuer
+  thumbprint_list = ["6A630BBA7CBB9AAECA88F56BF5134083BB7830B3"]
+  url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }
 
 resource "aws_iam_role" "alb_controller" {
@@ -43,7 +43,7 @@ resource "kubernetes_service_account" "alb_controller_sa" {
   }
 
   automount_service_account_token = true
-  depends_on = [aws_iam_role.alb_controller]
+  depends_on                      = [aws_iam_role.alb_controller]
 }
 
 resource "helm_release" "aws_load_balancer_controller" {

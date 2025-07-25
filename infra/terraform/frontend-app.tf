@@ -1,7 +1,7 @@
 resource "helm_release" "frontend" {
-  name       = "frontend"
-  namespace  = "default"
-  chart      = "../../charts/frontend"
+  name      = "frontend"
+  namespace = "default"
+  chart     = "../../charts/frontend"
 
   set {
     name  = "image.repository"

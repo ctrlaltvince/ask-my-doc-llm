@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/ctrlaltvince/ask-my-doc-llm/internal"
 	"log"
 	"net/http"
@@ -158,6 +160,14 @@ func profileHandler(c *gin.Context) {
 }
 
 func main() {
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+	internal.S3Client = client //
+
 	initOIDC()
 
 	r := gin.Default()
