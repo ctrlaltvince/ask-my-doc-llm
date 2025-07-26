@@ -99,18 +99,24 @@ resource "aws_iam_policy" "s3_upload_policy" {
   name        = "AskMyDocS3UploadPolicy"
   description = "Allow backend service to upload files to S3"
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "s3:PutObject",
           "s3:PutObjectAcl",
           "s3:GetObject"
-        ]
+        ],
         Resource = "arn:aws:s3:::ask-my-doc-llm-files/uploads/*"
+      },
+      {
+        Effect   = "Allow",
+        Action   = "s3:ListBucket",
+        Resource = "arn:aws:s3:::ask-my-doc-llm-files"
       }
     ]
   })
+
 }
 

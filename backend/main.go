@@ -7,6 +7,7 @@ import (
 	"github.com/ctrlaltvince/ask-my-doc-llm/internal"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/coreos/go-oidc"
@@ -21,6 +22,7 @@ var (
 	issuerURL    = "https://cognito-idp.us-west-1.amazonaws.com/us-west-1_RdclhXSHD"
 	oauth2Config oauth2.Config
 	provider     *oidc.Provider
+	OpenAIKey    = os.Getenv("OPENAI_API_KEY")
 )
 
 func initOIDC() {

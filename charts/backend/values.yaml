@@ -20,6 +20,11 @@ env:
   clientSecret: "22hgbmveqbd36du39hbg43hgs18nm9vtjmqlop13o165b9ea3kj"
   redirectUrl: "http://k8s-default-backend-9b913b25a6-822699744.us-west-1.elb.amazonaws.com"
   issuerUrl: "https://cognito-idp.us-west-1.amazonaws.com/us-west-1_RdclhXSHD"
+  openaiSecretName: openai-secret
+  openaiSecretKey: OPENAI_API_KEY
+
+secrets:
+  openaiSecretKey: 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
 
 resources:
   limits:

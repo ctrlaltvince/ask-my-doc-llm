@@ -3,14 +3,22 @@ package internal
 import (
 	"bytes"
 	"context"
-	"io"
+	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gin-gonic/gin"
 )
+
+var acceptedExtensions = map[string]bool{
+	".pdf": true,
+	".txt": true,
+	".md":  true,
+	".csv": true,
+}
 
 var S3Client *s3.Client
 
@@ -22,6 +30,13 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if !acceptedExtensions[ext] {
+		log.Printf("Rejected file with unsupported extension: %s", ext)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type"})
+		return
+	}
+
 	f, err := file.Open()
 	if err != nil {
 		log.Printf("file open error: %v", err)
@@ -30,20 +45,20 @@ func UploadFile(c *gin.Context) {
 	}
 	defer f.Close()
 
-	content, err := io.ReadAll(f)
+	// Extract text based on file extension
+	text, err := ExtractTextFromFile(f, ext)
 	if err != nil {
-		log.Printf("read error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		log.Printf("text extraction failed: %v", err)
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "Text extraction failed: " + err.Error()})
 		return
 	}
 
-	// upload to S3
+	// Upload extracted text as a .txt file to S3
+	key := "uploads/" + strings.TrimSuffix(file.Filename, ext) + ".txt"
 	_, err = S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String("ask-my-doc-llm-files"),
-		Key:    aws.String("uploads/" + file.Filename),
-		Body:   bytes.NewReader(content),
-		// Optional if bucket is already configured:
-		// SSEKMSKeyId: aws.String("alias/ask-my-doc-s3"),
+		Key:    aws.String(key),
+		Body:   bytes.NewReader([]byte(text)),
 	})
 	if err != nil {
 		log.Printf("S3 upload error: %v", err)
@@ -51,6 +66,6 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 
-	log.Printf("upload succeeded: %s", file.Filename)
+	log.Printf("upload succeeded: %s", key)
 	c.JSON(http.StatusOK, gin.H{"status": "Upload successful"})
 }
