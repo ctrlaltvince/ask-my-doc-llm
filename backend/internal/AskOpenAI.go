@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
 )
@@ -60,6 +61,7 @@ func AskOpenAI(prompt string) (string, error) {
 
 	if resp.StatusCode != 200 {
 		b, _ := io.ReadAll(resp.Body)
+		log.Printf("OpenAI non-200 response: %s", string(b))
 		return "", errors.New("OpenAI API error: " + string(b))
 	}
 
@@ -69,6 +71,7 @@ func AskOpenAI(prompt string) (string, error) {
 	}
 
 	if len(result.Choices) == 0 {
+		log.Printf("OpenAI returned no choices for prompt: %s", prompt)
 		return "", errors.New("no choices returned")
 	}
 
