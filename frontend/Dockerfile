@@ -18,15 +18,14 @@ RUN npm run build
 # Final lightweight image
 FROM --platform=linux/amd64 nginx:alpine
 
-# Copy built assets from builder
+# ✅ Copy everything Vite built, including favicon.ico
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY --from=builder /app/dist/background.png /usr/share/nginx/html/background.png
 
+# ✅ Only keep this if background.png is not in dist
+# (But it should be — Vite copies from /public)
+# COPY public/background.png /usr/share/nginx/html/background.png
 
-# Custom nginx config
+# nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-
-# Optional: set non-root user for security (if nginx supports it)
-# USER nginx
