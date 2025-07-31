@@ -23,7 +23,10 @@ export default function AskQuestion() {
         body: JSON.stringify({ question, filename }),
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Failed to get answer');
+      if (!res.ok) {
+        const errorResponse = await res.json();
+        throw new Error(errorResponse.error || 'Failed to get answer');
+      }
       const data = await res.json();
       setAnswer(data.answer);
     } catch (e) {
@@ -34,23 +37,42 @@ export default function AskQuestion() {
   }
 
   return (
-    <div style={{ marginTop: "2rem", textAlign: "center", maxWidth: "600px", marginInline: "auto" }}>
+    <div style={{ marginTop: "2rem", textAlign: "center", width: "100%", paddingInline: "1rem" }}>
       <h2 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>Ask a question</h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <input
-          type="text"
-          value={filename}
-          onChange={e => setFilename(e.target.value)}
-          placeholder="Enter filename (e.g., Introduction_to_AI)"
-          style={{ padding: "0.75rem 1rem", borderRadius: "8px", border: "none", fontSize: "1rem" }}
-        />
-        <input
-          type="text"
-          value={question}
-          onChange={e => setQuestion(e.target.value)}
-          placeholder="Enter your question"
-          style={{ padding: "0.75rem 1rem", borderRadius: "8px", border: "none", fontSize: "1rem" }}
-        />
+      
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", alignItems: "center" }}>
+          <input
+            type="text"
+            value={filename}
+            onChange={e => setFilename(e.target.value)}
+            placeholder="Enter filename (e.g., Introduction_to_AI)"
+            style={{ 
+              padding: "0.75rem 1rem", 
+              borderRadius: "8px", 
+              border: "none", 
+              fontSize: "1rem", 
+              width: "100%", 
+              maxWidth: "700px" 
+            }}
+          />
+          <input
+            type="text"
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            placeholder="Enter your question"
+            style={{ 
+              padding: "0.75rem 1rem", 
+              borderRadius: "8px", 
+              border: "none", 
+              fontSize: "1rem", 
+              width: "100%", 
+              maxWidth: "700px" 
+            }}
+          />
+
+
+
+
         <button
           onClick={handleAsk}
           disabled={loading || !question || !filename}
@@ -68,7 +90,22 @@ export default function AskQuestion() {
           {loading ? "Asking..." : "Ask"}
         </button>
       </div>
-      {answer && <p style={{ marginTop: "1rem", fontSize: "1.1rem" }}><strong>Answer:</strong> {answer}</p>}
+
+      {answer && (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div style={{
+            marginTop: "1rem",
+            fontSize: "1.1rem",
+            maxWidth: "800px",
+            wordWrap: "break-word",
+            whiteSpace: "pre-wrap",
+            textAlign: "left"
+          }}>
+            <strong>Answer:</strong> {answer}
+          </div>
+        </div>
+      )}
+
       {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
     </div>
   );

@@ -17,7 +17,9 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   tags = {
-    Name = "ask-my-doc-public-${count.index}"
+    Name                               = "ask-my-doc-public-${count.index}"
+    "kubernetes.io/role/elb"          = "1"
+    "kubernetes.io/cluster/ask-my-doc-cluster" = "shared"
   }
 }
 
@@ -27,8 +29,9 @@ resource "aws_subnet" "private" {
   cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 4, count.index + 2)
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
-    Name                              = "ask-my-doc-private-${count.index}"
-    "kubernetes.io/role/internal-elb" = "1"
+    Name                               = "ask-my-doc-private-${count.index}"
+    "kubernetes.io/role/internal-elb"  = "1"
+    "kubernetes.io/cluster/ask-my-doc-cluster" = "shared"
   }
 }
 

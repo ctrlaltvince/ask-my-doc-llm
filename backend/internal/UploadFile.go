@@ -54,7 +54,8 @@ func UploadFile(c *gin.Context) {
 	}
 
 	// Upload extracted text as a .txt file to S3
-	key := "uploads/" + strings.TrimSuffix(file.Filename, ext) + ".txt"
+	filename := strings.ToLower(file.Filename)
+	key := "uploads/" + strings.TrimSuffix(filename, ext) + ".txt"
 	_, err = S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String("ask-my-doc-llm-files"),
 		Key:    aws.String(key),
