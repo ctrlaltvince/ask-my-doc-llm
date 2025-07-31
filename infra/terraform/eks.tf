@@ -59,3 +59,25 @@ resource "aws_eks_fargate_profile" "kube_system" {
   depends_on = [aws_eks_cluster.this]
 }
 
+resource "aws_eks_fargate_profile" "argocd" {
+  cluster_name           = aws_eks_cluster.this.name
+  fargate_profile_name   = "argocd"
+  pod_execution_role_arn = aws_iam_role.fargate_pod_execution.arn
+
+  subnet_ids = [
+    aws_subnet.private[0].id,
+    aws_subnet.private[1].id
+  ]
+
+  selector {
+    namespace = "argocd"
+  }
+
+  tags = {
+    Name = "argocd-fargate"
+  }
+
+  depends_on = [aws_eks_cluster.this]
+}
+
+

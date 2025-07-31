@@ -30,7 +30,14 @@ export default function AskQuestion() {
       const data = await res.json();
       setAnswer(data.answer);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "An unknown error occurred");
+        const msg = e instanceof Error ? e.message : "An unknown error occurred";
+        if (msg.includes("restricted")) {
+          setError("Your question contains restricted language and can't be processed.");
+        } else if (msg.includes("unsafe")) {
+          setError("Your question contains characters that may be unsafe.");
+        } else {
+          setError(msg);
+        }
     } finally {
       setLoading(false);
     }

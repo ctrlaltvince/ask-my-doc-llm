@@ -1,3 +1,4 @@
+# frontend/templates/shared-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -8,7 +9,10 @@ metadata:
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/group.name: askmydoc
+    alb.ingress.kubernetes.io/group.order: "5"
 spec:
   ingressClassName: alb
   rules:
@@ -22,7 +26,7 @@ spec:
                 name: backend
                 port:
                   number: 8081
-          - path: {{ .Values.ingress.path }}
+          - path: /
             pathType: Prefix
             backend:
               service:
