@@ -4,7 +4,7 @@ set -e
 
 # Set once
 REGION=us-west-1
-ACCOUNT_ID=242650469816
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REPO_NAME=ask-my-doc-backend
 
 # Authenticate
@@ -35,7 +35,7 @@ else
   docker buildx use mybuilder
 fi
 
-# ✅ Build and load image for linux/amd64
+# Build and load image for linux/amd64
 docker buildx build --platform linux/amd64 -t "$REPO_NAME:latest" --load .
 
 # Tag and push to ECR

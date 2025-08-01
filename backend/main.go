@@ -16,13 +16,14 @@ import (
 )
 
 var (
-	clientID     = "39u7iped9gp9cfnfutjp1ras8b"
-	clientSecret = "22hgbmveqbd36du39hbg43hgs18nm9vtjmqlop13o165b9ea3kj"
-	redirectURL  = "https://askmydoc.dev/oauth/callback"
-	issuerURL    = "https://cognito-idp.us-west-1.amazonaws.com/us-west-1_RdclhXSHD"
+	// These values are provided via Kubernetes secrets injected as environment variables.
+	clientID     = os.Getenv("CLIENT_ID")
+	clientSecret = os.Getenv("CLIENT_SECRET")
+	redirectURL  = os.Getenv("REDIRECT_URL")
+	issuerURL    = os.Getenv("ISSUER_URL")
+	OpenAIKey    = os.Getenv("OPENAI_API_KEY")
 	oauth2Config oauth2.Config
 	provider     *oidc.Provider
-	OpenAIKey    = os.Getenv("OPENAI_API_KEY")
 )
 
 func initOIDC() {
@@ -106,7 +107,7 @@ func callbackHandler(c *gin.Context) {
 		return
 	}
 
-	// ✅ Now we can log the actual received code
+	// Now we can log the actual received code
 	log.Printf("Received code: %s", req.Code)
 	log.Printf("Trying to exchange using redirect URI: %s", oauth2Config.RedirectURL)
 

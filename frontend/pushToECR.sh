@@ -4,7 +4,7 @@ set -e
 
 # Set once
 REGION=us-west-1
-ACCOUNT_ID=242650469816
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REPO_NAME=ask-my-doc-frontend
 
 # Authenticate

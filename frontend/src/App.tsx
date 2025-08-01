@@ -6,9 +6,9 @@ import UploadFile from "./UploadFile";
 import { BACKEND_URL } from "./config";
 
 const Home = () => {
-  const clientID = "39u7iped9gp9cfnfutjp1ras8b";
-  const redirectURL = "https://askmydoc.dev/oauth/callback";
-  const cognitoDomain = "https://us-west-1rdclhxshd.auth.us-west-1.amazoncognito.com";
+  const clientID = import.meta.env.VITE_CLIENT_ID;
+  const redirectURL = import.meta.env.VITE_REDIRECT_URL;
+  const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN;
   const [message, setMessage] = useState<string | null>(null); // Login message
   const [profileInfo, setProfileInfo] = useState<string | null>(null); // Profile display
   const [token, setToken] = useState<string | null>(null);
